@@ -1,0 +1,9 @@
+goat
+goat-*
+.DS*
+*.log
+*.tmp
+*.pid
+*.zip
+*.db
+*.db*
