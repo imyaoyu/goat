@@ -149,7 +149,7 @@ type ApiCtx struct {
 #### Middleware Support
 ```go
 app.AddFunc(LogIp)// Log request
-)
+
 ```
 
 ## 🔧 Configuration
