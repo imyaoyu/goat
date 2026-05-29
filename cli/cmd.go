@@ -291,13 +291,13 @@ func InitProject(serverName string) error {
 package main
 
 import (
-	"goat/app"
+	"github.com/imyaoyu/goat/app"
 )
 
 func main() {
 
 	// Example API endpoint: code "hi" returns success
-	app.Add("hi", func(c *app.ApiCtx) {
+	app.Api("hi", func(c *app.ApiCtx) {
 		c.Log("Hello from generated API")
 	})
 
