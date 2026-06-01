@@ -606,14 +606,6 @@ curl -X POST http://localhost:8080/demo \
 
 ### See more [main.go] as a demo
 
-## 🔒 Security Features
-
-- **SQL Injection Protection**: Parameterized queries in CSV import
-- **XSS Prevention**: HttpOnly cookies for session management
-- **CSRF Protection**: SameSite cookie attribute
-- **Request Tracing**: Automatic trace ID propagation
-- **Structured Logging**: JSON format for log aggregation
-
 ## 🤝 Contributing
 
 1. Fork the repository
