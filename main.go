@@ -21,7 +21,7 @@ func main() {
 	app.Func(LogIp)
 
 	//Define api
-	app.Api("1", api.SignUpOrIn)
+	app.Api("a.1", api.SignUpOrIn)
 
 	app.Api("demo", func(c *app.ApiCtx) {
 

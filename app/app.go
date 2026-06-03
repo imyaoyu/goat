@@ -13,13 +13,11 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
-	"strings"
 	"syscall"
 	"time"
 
 	_ "modernc.org/sqlite"
 
-	"github.com/google/uuid"
 	"xorm.io/xorm"
 	"xorm.io/xorm/core"
 
@@ -55,10 +53,10 @@ var (
 	_ServerMux *http.ServeMux = http.NewServeMux() // HTTP router
 
 	// Application configuration
-	_Router  = map[string]ApiFunc{} // API routing table: code -> handler
-	_Midware = []ApiFunc{}          // Middleware list
-	_Env     = map[string]string{}  // Environment variables loaded from config file
-	_CodeMsg = map[int]string{}
+	_Router    = map[string]ApiFunc{} // API routing table: code -> handler
+	_FuncChain = []ApiFunc{}          // Middleware list
+	_Env       = map[string]string{}  // Environment variables loaded from config file
+	_CodeMsg   = map[int]string{}
 )
 
 // ApiFunc defines the signature for API handlers
@@ -215,6 +213,16 @@ func loadConfig(configFile string) {
 	}
 }
 
+// Env returns an environment variable value from the config file.
+func Env(key string) string {
+	return _Env[key]
+}
+
+// DB returns the XORM engine instance.
+func DB() *xorm.Engine {
+	return _DB_XORM
+}
+
 // ==================== Routing ====================
 
 func CodeMsg(code int, msg string) {
@@ -229,53 +237,12 @@ func Api(code string, api ApiFunc) {
 
 // Func registers an middlware
 func Func(f ApiFunc) {
-	_Midware = append(_Midware, f)
+	_FuncChain = append(_FuncChain, f)
 }
 
 // Handle register a http handle for the given func(w,r)
 func Handle(path string, f func(w http.ResponseWriter, r *http.Request)) {
 	_ServerMux.Handle(path, http.HandlerFunc(f))
-}
-
-var routerApiFunc ApiFunc = func(c *ApiCtx) {
-
-	c.ApiCode = c.Request.PathValue(GOAT)
-
-	if apiFunc, ok := _Router[c.ApiCode]; ok {
-		apiFunc(c)
-	} else {
-		c.Panic(404, "NotFound", fmt.Errorf("ApiCode:%s", c.ApiCode))
-	}
-}
-
-// ==================== Recovery Middleware ====================
-
-// wrapRecover creates a middleware that recovers from panics and returns appropriate responses.
-func wrapRecover(nextFuncs ...ApiFunc) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// new ctx
-		c := newApiCtx(w, r)
-		// recovery
-		defer func() {
-			if rc := recover(); rc != nil {
-
-				switch err := rc.(type) {
-				case *apiError:
-					c.returnErrorResult(err)
-				default:
-					c.returnNotKnown(rc)
-				}
-			} else {
-				c.returnResult()
-			}
-		}()
-
-		// Execute all middleware/handlers in order
-		for _, next := range nextFuncs {
-			next(c)
-		}
-
-	})
 }
 
 // ==================== Server Lifecycle ====================
@@ -311,11 +278,18 @@ func initServer() *http.Server {
 	}
 
 	// Add the last ApiFunc
-	_Midware = append(_Midware, routerApiFunc)
+	_FuncChain = append(_FuncChain, func(c *ApiCtx) {
+
+		if apiFunc, ok := _Router[c.ApiCode]; ok {
+			apiFunc(c)
+		} else {
+			c.Panic(404, "NotFound", fmt.Errorf("ApiCode:%s", c.ApiCode))
+		}
+	})
 
 	// Register the main API gateway route
 	path := fmt.Sprintf("/{%s}", GOAT)
-	_ServerMux.Handle(path, wrapRecover(_Midware...))
+	_ServerMux.Handle(path, wrapRecover(_FuncChain...))
 
 	addr := fmt.Sprintf(":%d", _PORT)
 
@@ -351,29 +325,32 @@ func waitShutDown(server *http.Server) {
 	}
 }
 
-// Env returns an environment variable value from the config file.
-func Env(key string) string {
-	return _Env[key]
-}
+// ==================== Recovery Middleware ====================
 
-func Now() string {
-	return time.Now().Format(time.DateTime)
-}
+// wrapRecover creates a middleware that recovers from panics and returns appropriate responses.
+func wrapRecover(nextFuncs ...ApiFunc) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		// new ctx
+		c := newApiCtx(w, r)
+		// recovery
+		defer func() {
+			if rc := recover(); rc != nil {
 
-// ==================== UUID ====================
+				switch err := rc.(type) {
+				case *apiError:
+					c.returnErrorResult(err)
+				default:
+					c.returnNotKnown(rc)
+				}
+			} else {
+				c.returnResult()
+			}
+		}()
 
-// UUID generates a UUID(v7 first) string without hyphens.
-func UUID() string {
-	var s string
-	if id, err := uuid.NewV7(); err != nil {
-		s = uuid.New().String() //v4
-	} else {
-		s = id.String()
-	}
-	return strings.ReplaceAll(s, "-", "")
-}
+		// Execute all middleware/handlers in order
+		for _, next := range nextFuncs {
+			next(c)
+		}
 
-// DB returns the XORM engine instance.
-func DB() *xorm.Engine {
-	return _DB_XORM
+	})
 }

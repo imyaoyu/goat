@@ -8,8 +8,6 @@ import (
 	"runtime"
 	"strings"
 	"time"
-
-	"gopkg.in/validator.v2"
 )
 
 const OK = "OK"
@@ -88,13 +86,13 @@ func newApiCtx(w http.ResponseWriter, r *http.Request) *ApiCtx {
 	c.Request = r
 	c.Response = w
 	c.UserId = r.Header.Get(X_USER_ID)
-
 	// Generate or propagate trace ID
 	if traceID := r.Header.Get(X_TRACE_ID); traceID == "" {
 		c.TraceId = UUID()
 	} else {
 		c.TraceId = traceID
 	}
+	c.ApiCode = c.Request.PathValue(GOAT)
 
 	return c
 }
@@ -122,7 +120,7 @@ func (c *ApiCtx) Init(i any, o any) {
 	c.Log("InitInput", "c.I", c.I)
 
 	// Validate input using validator tags
-	if err := validator.Validate(c.I); err != nil {
+	if err := ValidateJSON(c.I); err != nil {
 		c.Panic(http.StatusBadRequest, "ValidateJsonError", err)
 	}
 }
@@ -223,7 +221,8 @@ func (c *ApiCtx) SelectM(sql string) []map[string][]byte {
 }
 
 // SelectS performs a paginated query and populates the results slice
-func (c *ApiCtx) SelectS(results *[]any, limit, start int, orderby string, where string, values ...any) {
+// result is a point
+func (c *ApiCtx) SelectS(results any, limit, start int, orderby string, where string, values ...any) {
 	ctx := c.Request.Context()
 	err := DB().Context(ctx).
 		Where(where, values...).
