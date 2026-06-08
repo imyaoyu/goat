@@ -13,6 +13,7 @@ import (
 	"os"
 	"os/signal"
 	"runtime"
+	"runtime/debug"
 	"syscall"
 	"time"
 
@@ -335,11 +336,11 @@ func wrapRecover(nextFuncs ...ApiFunc) http.Handler {
 		// recovery
 		defer func() {
 			if rc := recover(); rc != nil {
-
 				switch err := rc.(type) {
 				case *apiError:
 					c.returnErrorResult(err)
 				default:
+					debug.PrintStack()
 					c.returnNotKnown(rc)
 				}
 			} else {

@@ -28,14 +28,15 @@ const HelpInfo = `
 	go@[~]> help
 	go@[~]> sqlite [xx.db]
 	go@[~]> sqlf db.sql
-	go@[~]> load data.csv
-	go@[~]> select * from test
-	go@[~]> update test set where
-	go@[~]> delete from test where
+	go@[~]> load tablename.csv
+	go@[~]> dump tablename
+	go@[~]> select * from tablename
+	go@[~]> update tablename set where
+	go@[~]> delete from tablename where
 	go@[~]> clear
 	go@[~]> build [linux]		
-	go@[~]> zip
-	go@[~]> init gocb1	
+	go@[~]> zip [dirpath]
+	go@[~]> init myapp	
 `
 
 // Built-in filesystem commands
