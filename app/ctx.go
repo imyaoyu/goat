@@ -114,14 +114,14 @@ func (c *ApiCtx) Init(i any, o any) {
 
 	// Decode JSON request body
 	if err := json.NewDecoder(c.Request.Body).Decode(c.I); err != nil {
-		c.Panic(http.StatusBadRequest, "DecodeJsonError", err)
+		c.Panic(400, "DecodeJsonError", err)
 	}
 
 	c.Log("InitInput", "c.I", c.I)
 
 	// Validate input using validator tags
 	if err := ValidateJSON(c.I); err != nil {
-		c.Panic(http.StatusBadRequest, "ValidateJsonError", err)
+		c.Panic(400, "ValidateJsonError", err)
 	}
 }
 
@@ -179,13 +179,13 @@ func (c *ApiCtx) returnErrorResult(err *apiError) {
 func (c *ApiCtx) writeJSON(res *apiResult) {
 	c.Response.Header().Set("Content-Type", "application/json; charset=utf-8")
 	if err := json.NewEncoder(c.Response).Encode(res); err != nil {
-		c.Panic(http.StatusInternalServerError, "InternalServerError", err)
+		c.Panic(500, "JsonEncoderError", err)
 	}
 }
 
 // returnNotKnown sends a 500 error response for unexpected panics
 func (c *ApiCtx) returnNotKnown(rc any) {
-	c.returnErrorResult(newError(500, "NotKnown", fmt.Errorf("%v", rc)))
+	c.returnErrorResult(newError(500, "SystemError", fmt.Errorf("%v", rc)))
 }
 
 // ==================== Database Accessors ====================
